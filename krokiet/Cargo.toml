@@ -48,9 +48,13 @@ rodio = { version = "0.21.1", default-features = false, features = ["playback", 
 #slint-build = { git = "https://github.com/slint-ui/slint.git" }
 slint-build = "1.13"
 
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
 [features]
 default = ["winit_femtovg", "winit_software"]
 audio = ["rodio"]
+add_windows_icon = []
 skia_opengl = ["slint/renderer-skia-opengl"]
 skia_vulkan = ["slint/renderer-skia-vulkan"]
 software = ["slint/renderer-software"]

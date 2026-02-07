@@ -30,7 +30,7 @@ jobs:
         run: |
           sed -i 's/#lto = /lto = /g' Cargo.toml
           sed -i 's/#codegen-units /codegen-units /g' Cargo.toml
-          cargo build --release --target x86_64-pc-windows-gnu --bin krokiet
+          cargo build --release --target x86_64-pc-windows-gnu --bin krokiet --features "add_windows_icon"
           mv target/x86_64-pc-windows-gnu/release/krokiet.exe windows_krokiet_on_linux.exe
 
       - name: Compile Krokiet Debug
@@ -38,13 +38,8 @@ jobs:
         run: |
           sed -i 's/^\(\[profile\.dev\.package.*\)/#\1/' Cargo.toml
           sed -i 's|^opt-level = 3 # OPT PACKAGES|#opt-level = 3 # OPT PACKAGES|' Cargo.toml
-          cargo build --target x86_64-pc-windows-gnu --bin krokiet
+          cargo build --target x86_64-pc-windows-gnu --bin krokiet --features "add_windows_icon"
           mv target/x86_64-pc-windows-gnu/debug/krokiet.exe windows_krokiet_on_linux.exe
-
-      - name: Add icon
-        run: |
-          wget -q -O ./rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
-          wine ./rcedit-x64.exe windows_krokiet_on_linux.exe --set-icon "krokiet/icons/krokiet_logo_flag.ico"
 
       - name: Pack with 7z
         run: |
@@ -86,9 +81,9 @@ jobs:
           powershell -Command "(Get-Content Cargo.toml) -replace '#lto = ', 'lto = ' | Set-Content Cargo.toml"
           # Replace '#codegen-units ' with 'codegen-units ' in Cargo.toml
           powershell -Command "(Get-Content Cargo.toml) -replace '#codegen-units ', 'codegen-units ' | Set-Content Cargo.toml"
-          cargo build --release --bin krokiet --no-default-features --features "winit_skia_opengl,winit_software"
+          cargo build --release --bin krokiet --no-default-features --features "winit_skia_opengl,winit_software,add_windows_icon"
           mv target/release/krokiet.exe windows_krokiet_on_windows_skia_opengl.exe
-          cargo build --release --bin krokiet --no-default-features --features "winit_skia_vulkan,winit_software"
+          cargo build --release --bin krokiet --no-default-features --features "winit_skia_vulkan,winit_software,add_windows_icon"
           mv target/release/krokiet.exe windows_krokiet_on_windows_skia_vulkan.exe
 
       - name: Compile Krokiet Debug
@@ -98,17 +93,8 @@ jobs:
           powershell -Command "(Get-Content Cargo.toml) -replace '^\[profile\.dev\.package.*', { '#' + \$_ } | Set-Content Cargo.toml"
           # Comment out 'opt-level = 3 # OPT PACKAGES'
           powershell -Command "(Get-Content Cargo.toml) -replace '^opt-level = 3 # OPT PACKAGES', '#opt-level = 3 # OPT PACKAGES' | Set-Content Cargo.toml"
-          cargo build --bin krokiet --no-default-features --features "winit_skia_opengl,winit_software"
+          cargo build --bin krokiet --no-default-features --features "winit_skia_opengl,winit_software,add_windows_icon"
           mv target/debug/krokiet.exe windows_krokiet_on_windows_skia_opengl.exe
-
-      - name: Add icon
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe" -OutFile ".\\rcedit-x64.exe"
-          $rcedit = ".\\rcedit-x64.exe"
-          if (-not (Test-Path $rcedit)) { Write-Error "rcedit not found"; exit 1 }
-          foreach ($f in @("windows_krokiet_on_windows_skia_opengl.exe","windows_krokiet_on_windows_skia_vulkan.exe")) {
-            if (Test-Path $f) { & $rcedit $f --set-icon "krokiet/icons/krokiet_logo_flag.ico" } else { Write-Host "$f not found" }
-          }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -163,22 +149,6 @@ jobs:
           cargo build --target=x86_64-pc-windows-gnu --locked --profile fastci
           cp target/x86_64-pc-windows-gnu/fastci/czkawka_gui.exe package/
           cp target/x86_64-pc-windows-gnu/fastci/czkawka_cli.exe package/
-
-      - name: Add icon
-        run: |
-          # Ensure Wine uses a prefix inside the workspace (owned by the runner) so it does not try to create ~/.wine in /github/home
-          export HOME="$GITHUB_WORKSPACE"
-          export WINEPREFIX="$GITHUB_WORKSPACE/.wine"
-          mkdir -p "$WINEPREFIX"
-          # Download rcedit and apply icon to the built exes
-          wget -q -O ./rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
-          for f in package/czkawka_gui.exe package/czkawka_cli.exe; do
-            if [ -f "$f" ]; then
-              wine ./rcedit-x64.exe "$f" --set-icon "czkawka_gui/icons/icon.ico"
-            else
-              echo "$f not found, skipping"
-            fi
-          done
 
       - name: Package
         run: |

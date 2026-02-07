@@ -6,4 +6,10 @@ fn main() {
     } else {
         slint_build::compile("ui/main_window.slint").expect("Unable to compile slint file");
     }
+
+    if cfg!(all(target_os = "windows", feature = "add_windows_icon")) {
+        let mut res = winres::WindowsResource::new();
+        res.set_icon("icons/krokiet_logo_flag.ico");
+        res.compile().expect("Unable to compile icon");
+    }
 }
