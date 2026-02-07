@@ -25,10 +25,6 @@ jobs:
           rustup default 1.92.0
           rustup target add x86_64-pc-windows-gnu
 
-      - name: Install ico tool
-        run: |
-          cargo install --path misc/add_icon_exe
-
       - name: Compile Krokiet Release
         if: ${{ github.ref == 'refs/heads/master' }}
         run: |
@@ -82,10 +78,6 @@ jobs:
       - name: Setup rust version
         run: |
           rustup default 1.92.0
-
-      - name: Install ico tool
-        run: |
-          cargo install --path misc/add_icon_exe
 
       - name: Compile Krokiet Release
         if: ${{ github.ref == 'refs/heads/master' }}
@@ -154,10 +146,6 @@ jobs:
           
           mkdir -p package
 
-      - name: Install ico tool
-        run: |
-          source "$HOME/.cargo/env" && cargo install --path misc/add_icon_exe
-
       - name: Cross compile for Windows - Release
         if: ${{ github.ref == 'refs/heads/master' }}
         run: |
@@ -181,7 +169,7 @@ jobs:
           wget -q -O ./rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
           for f in package/czkawka_gui.exe package/czkawka_cli.exe; do
             if [ -f "$f" ]; then
-              wine ./rcedit-x64.exe "$f" --set-icon "czkawka_gui/icons/icon_about.png"
+              wine ./rcedit-x64.exe "$f" --set-icon "czkawka_gui/icons/icon.ico"
             else
               echo "$f not found, skipping"
             fi
