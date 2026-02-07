@@ -166,6 +166,11 @@ jobs:
 
       - name: Add icon
         run: |
+          # Ensure Wine uses a prefix inside the workspace (owned by the runner) so it does not try to create ~/.wine in /github/home
+          export HOME="$GITHUB_WORKSPACE"
+          export WINEPREFIX="$GITHUB_WORKSPACE/.wine"
+          mkdir -p "$WINEPREFIX"
+          # Download rcedit and apply icon to the built exes
           wget -q -O ./rcedit-x64.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
           for f in package/czkawka_gui.exe package/czkawka_cli.exe; do
             if [ -f "$f" ]; then
