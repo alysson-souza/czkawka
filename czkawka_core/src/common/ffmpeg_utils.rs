@@ -4,7 +4,30 @@ use std::time::{Duration, Instant};
 use crate::common::process_utils::disable_windows_console_window;
 use crate::tools::video_optimizer::{HardwareEncoder, VideoCodec};
 
+#[cfg(target_os = "macos")]
+fn ensure_macos_path() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        let extra_dirs = [
+            "/opt/homebrew/bin", // Homebrew on Apple Silicon
+            "/usr/local/bin",    // Homebrew on Intel
+            "/opt/local/bin",    // MacPorts
+        ];
+        let current = std::env::var("PATH").unwrap_or_default();
+        let missing: Vec<&str> = extra_dirs.iter().filter(|d| !current.split(':').any(|p| p == **d)).copied().collect();
+        if !missing.is_empty() {
+            let new_path = format!("{current}:{}", missing.join(":"));
+            // SAFETY: called once at startup via Once, before any threads spawn
+            unsafe { std::env::set_var("PATH", &new_path) };
+        }
+    });
+}
+
 pub fn check_if_ffprobe_ffmpeg_exists() -> bool {
+    #[cfg(target_os = "macos")]
+    ensure_macos_path();
+
     let mut ffmpeg_command = Command::new("ffmpeg");
     disable_windows_console_window(&mut ffmpeg_command);
     let ffmpeg_ok = ffmpeg_command
