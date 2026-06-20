@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INPUT_SVG="${1:-$SCRIPT_DIR/../../data/icons/io.github.qarmin.czkawka.krokiet.svg}"
+INPUT_SVG="${1:-$SCRIPT_DIR/../../krokiet/icons/krokiet_logo.svg}"
 OUTPUT_ICNS="${2:-$SCRIPT_DIR/krokiet.icns}"
 ICONSET_DIR="$SCRIPT_DIR/Krokiet.iconset"
 
