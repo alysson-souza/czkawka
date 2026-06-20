@@ -7,7 +7,12 @@ BINARY_PATH="${1:-target/release/krokiet}"
 OUTPUT_DMG="${2:-mac_krokiet_universal.dmg}"
 VARIANT_NAME="${3:-krokiet}"
 
-DISPLAY_NAME="$(tr '[:lower:]' '[:upper:]' <<< "${VARIANT_NAME:0:1}")${VARIANT_NAME:1}"
+case "$VARIANT_NAME" in
+  krokiet_heif_avif)             DISPLAY_NAME="Krokiet (heif/avif)";            BUNDLE_ID="io.github.qarmin.czkawka.krokiet.heif_avif";;
+  krokiet_skia_vulkan)           DISPLAY_NAME="Krokiet (Skia/Vulkan)";           BUNDLE_ID="io.github.qarmin.czkawka.krokiet.skia_vulkan";;
+  krokiet_skia_vulkan_heif_avif) DISPLAY_NAME="Krokiet (Skia/Vulkan heif/avif)"; BUNDLE_ID="io.github.qarmin.czkawka.krokiet.skia_vulkan_heif_avif";;
+  *)                             DISPLAY_NAME="Krokiet";                          BUNDLE_ID="io.github.qarmin.czkawka.krokiet";;
+esac
 VERSION=$(grep "^version" "$SCRIPT_DIR/../../krokiet/Cargo.toml" | head -1 | cut -d'"' -f2)
 
 echo "Creating macOS DMG..."
@@ -32,13 +37,20 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BINARY_PATH" "$APP_BUNDLE/Contents/MacOS/krokiet"
 chmod +x "$APP_BUNDLE/Contents/MacOS/krokiet"
 
-sed "s/VERSION_PLACEHOLDER/$VERSION/g" "$SCRIPT_DIR/Info.plist" > "$APP_BUNDLE/Contents/Info.plist"
+sed \
+  -e "s|VERSION_PLACEHOLDER|$VERSION|g" \
+  -e "s|BUNDLE_ID_PLACEHOLDER|$BUNDLE_ID|g" \
+  -e "s|BUNDLE_NAME_PLACEHOLDER|$DISPLAY_NAME|g" \
+  "$SCRIPT_DIR/Info.plist" > "$APP_BUNDLE/Contents/Info.plist"
 
 if [[ ! -f "$SCRIPT_DIR/krokiet.icns" ]]; then
     echo "Generating icon..."
     bash "$SCRIPT_DIR/generate_icons.sh"
 fi
 cp "$SCRIPT_DIR/krokiet.icns" "$APP_BUNDLE/Contents/Resources/krokiet.icns"
+
+echo "Signing app bundle (ad-hoc)..."
+codesign --force --deep --sign - "$APP_BUNDLE"
 
 DMG_TEMP="$TEMP_DIR/temp.dmg"
 MOUNT_POINT="$TEMP_DIR/mount"

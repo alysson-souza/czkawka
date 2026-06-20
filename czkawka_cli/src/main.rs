@@ -50,6 +50,9 @@ pub struct CliOutput {
 }
 
 fn main() {
+    #[cfg(target_os = "macos")]
+    czkawka_core::common::ffmpeg_utils::ensure_macos_path();
+
     register_image_decoding_hooks();
     if cfg!(debug_assertions) {
         use clap::CommandFactory;

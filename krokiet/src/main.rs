@@ -91,6 +91,9 @@ mod ui {
 pub use ui::*;
 
 fn main() {
+    #[cfg(target_os = "macos")]
+    czkawka_core::common::ffmpeg_utils::ensure_macos_path();
+
     register_image_decoding_hooks();
     let config_cache_path_set_result = set_config_cache_path("Czkawka", "Krokiet");
     let cli_args = process_cli_args("Krokiet", "krokiet_gui", std::env::args().skip(1).collect());

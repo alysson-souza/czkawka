@@ -73,6 +73,9 @@ mod taskbar_progress_win;
 pub const CZKAWKA_GTK_TOOL_NUMBER: usize = TOOLS_NUMBER - 3; // Missing exif, video optimizer, bad names tools
 
 fn main() {
+    #[cfg(target_os = "macos")]
+    czkawka_core::common::ffmpeg_utils::ensure_macos_path();
+
     register_image_decoding_hooks();
     let config_cache_path_set_result = set_config_cache_path("Czkawka", "Czkawka");
 

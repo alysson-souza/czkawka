@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        os: [macos-latest, macos-13]  # macos-latest=ARM64, macos-13=last Intel (X64)
     steps:
       - uses: actions/checkout@v6
 
@@ -151,38 +151,35 @@ jobs:
     needs: macos
     if: ${{ github.ref == 'refs/heads/master' || github.event_name == 'pull_request' }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup rust version
-        run: rustup default 1.92.0
+      - uses: actions/checkout@v6
 
       - name: Install icon tools
         run: |
           brew install librsvg
 
       - name: Download ARM64 artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: all-macOS-ARM64-release
           path: artifacts/arm64
         if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Download x86_64 artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: all-macOS-X64-release
           path: artifacts/x86_64
         if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Download ARM64 artifacts (debug)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: all-macOS-ARM64-debug
           path: artifacts/arm64
         if: ${{ github.ref != 'refs/heads/master' }}
 
       - name: Download x86_64 artifacts (debug)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: all-macOS-X64-debug
           path: artifacts/x86_64
@@ -191,65 +188,36 @@ jobs:
       - name: Create universal binaries
         run: |
           mkdir -p universal_binaries
-          
-          # Create universal binaries using lipo
-          # Standard krokiet
-          if [[ -f artifacts/arm64/mac_krokiet_arm64 && -f artifacts/x86_64/mac_krokiet_x86_64 ]]; then
-            lipo -create artifacts/arm64/mac_krokiet_arm64 artifacts/x86_64/mac_krokiet_x86_64 -output universal_binaries/krokiet
-            echo "Created universal binary: krokiet"
-          fi
-          
-          # krokiet with heif/avif
-          if [[ -f artifacts/arm64/mac_krokiet_heif_avif_arm64 && -f artifacts/x86_64/mac_krokiet_heif_avif_x86_64 ]]; then
-            lipo -create artifacts/arm64/mac_krokiet_heif_avif_arm64 artifacts/x86_64/mac_krokiet_heif_avif_x86_64 -output universal_binaries/krokiet_heif_avif
-            echo "Created universal binary: krokiet_heif_avif"
-          fi
-          
-          # krokiet with skia/vulkan
-          if [[ -f artifacts/arm64/mac_krokiet_skia_vulkan_arm64 && -f artifacts/x86_64/mac_krokiet_skia_vulkan_x86_64 ]]; then
-            lipo -create artifacts/arm64/mac_krokiet_skia_vulkan_arm64 artifacts/x86_64/mac_krokiet_skia_vulkan_x86_64 -output universal_binaries/krokiet_skia_vulkan
-            echo "Created universal binary: krokiet_skia_vulkan"
-          fi
-          
-          # krokiet with skia/vulkan and heif/avif
-          if [[ -f artifacts/arm64/mac_krokiet_skia_vulkan_heif_avif_arm64 && -f artifacts/x86_64/mac_krokiet_skia_vulkan_heif_avif_x86_64 ]]; then
-            lipo -create artifacts/arm64/mac_krokiet_skia_vulkan_heif_avif_arm64 artifacts/x86_64/mac_krokiet_skia_vulkan_heif_avif_x86_64 -output universal_binaries/krokiet_skia_vulkan_heif_avif
-            echo "Created universal binary: krokiet_skia_vulkan_heif_avif"
-          fi
-          
+          VARIANTS="krokiet krokiet_heif_avif krokiet_skia_vulkan krokiet_skia_vulkan_heif_avif"
+          for v in $VARIANTS; do
+            arm64_bin="artifacts/arm64/mac_${v}_arm64"
+            x86_bin="artifacts/x86_64/mac_${v}_x86_64"
+            if [[ ! -f "$arm64_bin" ]]; then
+              echo "Error: missing ARM64 binary: $arm64_bin"
+              exit 1
+            fi
+            if [[ ! -f "$x86_bin" ]]; then
+              echo "Error: missing x86_64 binary: $x86_bin"
+              exit 1
+            fi
+            lipo -create "$arm64_bin" "$x86_bin" -output "universal_binaries/$v"
+            echo "Created universal binary: $v"
+          done
           ls -la universal_binaries/
 
       - name: Create app bundles and DMGs
         run: |
           # Generate icon first
-          cd misc/macos
-          bash generate_icons.sh
-          cd ../..
-          
-          # Create DMG for standard krokiet
-          if [[ -f universal_binaries/krokiet ]]; then
-            bash misc/macos/create_dmg.sh universal_binaries/krokiet mac_krokiet_universal.dmg krokiet
-          fi
-          
-          # Create DMG for krokiet with heif/avif
-          if [[ -f universal_binaries/krokiet_heif_avif ]]; then
-            bash misc/macos/create_dmg.sh universal_binaries/krokiet_heif_avif mac_krokiet_heif_avif_universal.dmg krokiet_heif_avif
-          fi
-          
-          # Create DMG for krokiet with skia/vulkan
-          if [[ -f universal_binaries/krokiet_skia_vulkan ]]; then
-            bash misc/macos/create_dmg.sh universal_binaries/krokiet_skia_vulkan mac_krokiet_skia_vulkan_universal.dmg krokiet_skia_vulkan
-          fi
-          
-          # Create DMG for krokiet with skia/vulkan and heif/avif
-          if [[ -f universal_binaries/krokiet_skia_vulkan_heif_avif ]]; then
-            bash misc/macos/create_dmg.sh universal_binaries/krokiet_skia_vulkan_heif_avif mac_krokiet_skia_vulkan_heif_avif_universal.dmg krokiet_skia_vulkan_heif_avif
-          fi
-          
-          ls -lh *.dmg || true
+          bash misc/macos/generate_icons.sh
+
+          VARIANTS="krokiet krokiet_heif_avif krokiet_skia_vulkan krokiet_skia_vulkan_heif_avif"
+          for v in $VARIANTS; do
+            bash misc/macos/create_dmg.sh "universal_binaries/$v" "mac_${v}_universal.dmg" "$v"
+          done
+          ls -lh *.dmg
 
       - name: Store DMG artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: krokiet-macos-universal-dmg
           path: |
@@ -257,7 +225,7 @@ jobs:
             mac_krokiet_heif_avif_universal.dmg
             mac_krokiet_skia_vulkan_universal.dmg
             mac_krokiet_skia_vulkan_heif_avif_universal.dmg
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Release DMGs
         if: ${{ github.ref == 'refs/heads/master' && vars.HAVE_PAT_REPOSITORY_TOKEN == '1' }}

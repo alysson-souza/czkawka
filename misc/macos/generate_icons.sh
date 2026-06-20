@@ -12,62 +12,52 @@ if [[ ! -f "$INPUT_SVG" ]]; then
     exit 1
 fi
 
+STAGING_DIR=$(mktemp -d)
+trap 'rm -rf "$STAGING_DIR" "$ICONSET_DIR"' EXIT
+
 echo "Generating macOS app icon..."
 echo "Input: $INPUT_SVG"
 echo "Output: $OUTPUT_ICNS"
 
+render_png() {
+    local size="$1"
+    local out="$STAGING_DIR/${size}.png"
+    if command -v rsvg-convert &> /dev/null; then
+        rsvg-convert -w "$size" -h "$size" "$INPUT_SVG" -o "$out"
+    elif command -v magick &> /dev/null; then
+        magick "$INPUT_SVG" -resize "${size}x${size}" "$out"
+    elif command -v convert &> /dev/null; then
+        convert "$INPUT_SVG" -resize "${size}x${size}" "$out"
+    else
+        echo "Error: No SVG converter found!"
+        echo "Please install one of:"
+        echo "  brew install librsvg"
+        echo "  brew install imagemagick"
+        exit 1
+    fi
+}
+
+render_png 16
+render_png 32
+render_png 64
+render_png 128
+render_png 256
+render_png 512
+render_png 1024
+
+# Assemble iconset with the 10 filenames that iconutil accepts
 mkdir -p "$ICONSET_DIR"
-
-if command -v rsvg-convert &> /dev/null; then
-    echo "Using rsvg-convert for SVG rendering..."
-    
-    rsvg-convert -w 16 -h 16 "$INPUT_SVG" -o "$ICONSET_DIR/icon_16x16.png"
-    rsvg-convert -w 32 -h 32 "$INPUT_SVG" -o "$ICONSET_DIR/icon_32x32.png"
-    rsvg-convert -w 64 -h 64 "$INPUT_SVG" -o "$ICONSET_DIR/icon_64x64.png"
-    rsvg-convert -w 128 -h 128 "$INPUT_SVG" -o "$ICONSET_DIR/icon_128x128.png"
-    rsvg-convert -w 256 -h 256 "$INPUT_SVG" -o "$ICONSET_DIR/icon_256x256.png"
-    rsvg-convert -w 512 -h 512 "$INPUT_SVG" -o "$ICONSET_DIR/icon_512x512.png"
-    rsvg-convert -w 1024 -h 1024 "$INPUT_SVG" -o "$ICONSET_DIR/icon_1024x1024.png"
-    
-elif command -v magick &> /dev/null; then
-    echo "Using ImageMagick (magick) for SVG rendering..."
-    
-    magick "$INPUT_SVG" -resize 16x16 "$ICONSET_DIR/icon_16x16.png"
-    magick "$INPUT_SVG" -resize 32x32 "$ICONSET_DIR/icon_32x32.png"
-    magick "$INPUT_SVG" -resize 64x64 "$ICONSET_DIR/icon_64x64.png"
-    magick "$INPUT_SVG" -resize 128x128 "$ICONSET_DIR/icon_128x128.png"
-    magick "$INPUT_SVG" -resize 256x256 "$ICONSET_DIR/icon_256x256.png"
-    magick "$INPUT_SVG" -resize 512x512 "$ICONSET_DIR/icon_512x512.png"
-    magick "$INPUT_SVG" -resize 1024x1024 "$ICONSET_DIR/icon_1024x1024.png"
-    
-elif command -v convert &> /dev/null; then
-    echo "Using ImageMagick (convert) for SVG rendering..."
-    
-    convert "$INPUT_SVG" -resize 16x16 "$ICONSET_DIR/icon_16x16.png"
-    convert "$INPUT_SVG" -resize 32x32 "$ICONSET_DIR/icon_32x32.png"
-    convert "$INPUT_SVG" -resize 64x64 "$ICONSET_DIR/icon_64x64.png"
-    convert "$INPUT_SVG" -resize 128x128 "$ICONSET_DIR/icon_128x128.png"
-    convert "$INPUT_SVG" -resize 256x256 "$ICONSET_DIR/icon_256x256.png"
-    convert "$INPUT_SVG" -resize 512x512 "$ICONSET_DIR/icon_512x512.png"
-    convert "$INPUT_SVG" -resize 1024x1024 "$ICONSET_DIR/icon_1024x1024.png"
-    
-else
-    echo "Error: No SVG converter found!"
-    echo "Please install one of them:"
-    echo "  brew install librsvg"
-    echo "  brew install imagemagick"
-    exit 1
-fi
-
-# Create retina (@2x) variants by copying larger sizes
-cp "$ICONSET_DIR/icon_32x32.png" "$ICONSET_DIR/icon_16x16@2x.png"
-cp "$ICONSET_DIR/icon_64x64.png" "$ICONSET_DIR/icon_32x32@2x.png"
-cp "$ICONSET_DIR/icon_256x256.png" "$ICONSET_DIR/icon_128x128@2x.png"
-cp "$ICONSET_DIR/icon_512x512.png" "$ICONSET_DIR/icon_256x256@2x.png"
-cp "$ICONSET_DIR/icon_1024x1024.png" "$ICONSET_DIR/icon_512x512@2x.png"
+cp "$STAGING_DIR/16.png"   "$ICONSET_DIR/icon_16x16.png"
+cp "$STAGING_DIR/32.png"   "$ICONSET_DIR/icon_16x16@2x.png"
+cp "$STAGING_DIR/32.png"   "$ICONSET_DIR/icon_32x32.png"
+cp "$STAGING_DIR/64.png"   "$ICONSET_DIR/icon_32x32@2x.png"
+cp "$STAGING_DIR/128.png"  "$ICONSET_DIR/icon_128x128.png"
+cp "$STAGING_DIR/256.png"  "$ICONSET_DIR/icon_128x128@2x.png"
+cp "$STAGING_DIR/256.png"  "$ICONSET_DIR/icon_256x256.png"
+cp "$STAGING_DIR/512.png"  "$ICONSET_DIR/icon_256x256@2x.png"
+cp "$STAGING_DIR/512.png"  "$ICONSET_DIR/icon_512x512.png"
+cp "$STAGING_DIR/1024.png" "$ICONSET_DIR/icon_512x512@2x.png"
 
 iconutil -c icns "$ICONSET_DIR" -o "$OUTPUT_ICNS"
-
-rm -rf "$ICONSET_DIR"
 
 echo "Successfully created: $OUTPUT_ICNS"
