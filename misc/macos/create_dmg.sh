@@ -27,6 +27,7 @@ if [[ ! -f "$BINARY_PATH" ]]; then
 fi
 
 TEMP_DIR=$(mktemp -d)
+trap 'hdiutil detach "${MOUNT_POINT:-}" -force 2>/dev/null || true; rm -rf "$TEMP_DIR"' EXIT
 APP_BUNDLE="$TEMP_DIR/$DISPLAY_NAME.app"
 
 echo "Creating app bundle..."
