@@ -17,9 +17,11 @@ pub fn ensure_macos_path() {
         let current = std::env::var("PATH").unwrap_or_default();
         let missing: Vec<&str> = extra_dirs.iter().filter(|d| !current.split(':').any(|p| p == **d)).copied().collect();
         if !missing.is_empty() {
-            let new_path = format!("{current}:{}", missing.join(":"));
-            // SAFETY:
-            // set_var is safe when called before any threads spawn (called once at startup)
+            let new_path = if current.is_empty() {
+                missing.join(":")
+            } else {
+                format!("{current}:{}", missing.join(":"))
+            };
             unsafe { std::env::set_var("PATH", &new_path) };
         }
     });
