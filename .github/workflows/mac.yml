@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 0 * * 2'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 env:
   CARGO_TERM_COLOR: always
   CZKAWKA_OFFICIAL_BUILD: ${{ vars.CZKAWKA_OFFICIAL_BUILD }}
@@ -143,4 +147,66 @@ jobs:
             mac_krokiet_skia_vulkan_heif_avif_${{ env.ARCHNAME }}
             mac_krokiet_skia_vulkan_${{ env.ARCHNAME }}
             mac_krokiet_femtovg_wgpu_${{ env.ARCHNAME }}
+          token: ${{ secrets.PAT_REPOSITORY }}
+
+  # Build the DMG package for Apple Silicon Macs.
+  build-arm64-dmg:
+    runs-on: macos-latest
+    needs: macos
+    if: ${{ github.ref == 'refs/heads/master' || github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install DMG tools and runtime dependencies
+        run: |
+          brew install librsvg ffmpeg libheif libavif dav1d
+
+      - name: Download ARM64 artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: all-macOS-ARM64-release
+          path: artifacts/arm64
+        if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Download ARM64 artifacts (debug)
+        uses: actions/download-artifact@v7
+        with:
+          name: all-macOS-ARM64-debug
+          path: artifacts/arm64
+        if: ${{ github.ref != 'refs/heads/master' }}
+
+      - name: Create app bundle and DMG
+        run: |
+          all_deps_zip="artifacts/arm64/mac_krokiet_heif_avif_all_backends_arm64.zip"
+          app_bundle_source="artifacts/dmg"
+          if [[ ! -f "$all_deps_zip" ]]; then
+            echo "Error: missing ARM64 all-dependencies package: $all_deps_zip"
+            exit 1
+          fi
+
+          mkdir -p "$app_bundle_source"
+          unzip -q "$all_deps_zip" -d "$app_bundle_source"
+
+          arm64_bin="$app_bundle_source/krokiet"
+          if [[ ! -f "$arm64_bin" ]]; then
+            echo "Error: missing krokiet binary in package: $all_deps_zip"
+            exit 1
+          fi
+
+          bash misc/macos/create_dmg.sh "$arm64_bin" "mac_krokiet_arm64.dmg"
+          ls -lh *.dmg
+
+      - name: Store DMG artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: krokiet-macos-arm64-dmg
+          path: mac_krokiet_arm64.dmg
+          if-no-files-found: error
+
+      - name: Release DMG
+        if: ${{ github.ref == 'refs/heads/master' && vars.HAVE_PAT_REPOSITORY_TOKEN == '1' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "Nightly"
+          files: mac_krokiet_arm64.dmg
           token: ${{ secrets.PAT_REPOSITORY }}

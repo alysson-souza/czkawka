@@ -151,6 +151,7 @@ The source code remains in the repository and compatibility with `czkawka_core` 
 
 ### Krokiet
 - Added a new logo - [#1726](https://github.com/qarmin/czkawka/pull/1726)
+- Added a macOS DMG package for easy installation on Apple Silicon Macs
 - Added video thumbnails, single and grid view - [#1714](https://github.com/qarmin/czkawka/pull/1714)
 - Displayed cache, thumbnails, and logs size in settings - [#1714](https://github.com/qarmin/czkawka/pull/1714)
 - Added sorting by clicking column headers - [#1718](https://github.com/qarmin/czkawka/pull/1718)
