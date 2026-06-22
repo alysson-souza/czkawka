@@ -148,7 +148,7 @@ The project will remain available in the repository. For some time I will ensure
 
 ### Krokiet
 - Added a new logo - [#1726](https://github.com/qarmin/czkawka/pull/1726)
-- Added macOS universal DMG packages for easy installation on both Intel and Apple Silicon Macs
+- Added macOS DMG packages for easy installation on Apple Silicon Macs
 - Added video thumbnails, single and grid view - [#1714](https://github.com/qarmin/czkawka/pull/1714)
 - Displayed cache, thumbnails, and logs size in settings - [#1714](https://github.com/qarmin/czkawka/pull/1714)
 - Added sorting by clicking column headers - [#1718](https://github.com/qarmin/czkawka/pull/1718)

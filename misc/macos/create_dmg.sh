@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINARY_PATH="${1:-target/release/krokiet}"
-OUTPUT_DMG="${2:-mac_krokiet_universal.dmg}"
+OUTPUT_DMG="${2:-mac_krokiet_arm64.dmg}"
 VARIANT_NAME="${3:-krokiet}"
 
 case "$VARIANT_NAME" in

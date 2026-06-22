@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, macos-15-intel]  # macos-latest=ARM64, macos-15-intel=Intel (X64)
+        os: [macos-latest]
     steps:
       - uses: actions/checkout@v6
 
@@ -149,8 +149,8 @@ jobs:
             mac_krokiet_femtovg_wgpu_${{ env.ARCHNAME }}
           token: ${{ secrets.PAT_REPOSITORY }}
 
-  # Build universal DMG packages that work on both Intel and Apple Silicon Macs
-  build-universal-dmg:
+  # Build DMG packages for Apple Silicon Macs.
+  build-arm64-dmg:
     runs-on: macos-latest
     needs: macos
     if: ${{ github.ref == 'refs/heads/master' || github.event_name == 'pull_request' }}
@@ -168,13 +168,6 @@ jobs:
           path: artifacts/arm64
         if: ${{ github.ref == 'refs/heads/master' }}
 
-      - name: Download x86_64 artifacts
-        uses: actions/download-artifact@v7
-        with:
-          name: all-macOS-X64-release
-          path: artifacts/x86_64
-        if: ${{ github.ref == 'refs/heads/master' }}
-
       - name: Download ARM64 artifacts (debug)
         uses: actions/download-artifact@v7
         with:
@@ -182,53 +175,30 @@ jobs:
           path: artifacts/arm64
         if: ${{ github.ref != 'refs/heads/master' }}
 
-      - name: Download x86_64 artifacts (debug)
-        uses: actions/download-artifact@v7
-        with:
-          name: all-macOS-X64-debug
-          path: artifacts/x86_64
-        if: ${{ github.ref != 'refs/heads/master' }}
-
-      - name: Create universal binaries
-        run: |
-          mkdir -p universal_binaries
-          VARIANTS="krokiet krokiet_heif_avif krokiet_skia_vulkan krokiet_skia_vulkan_heif_avif"
-          for v in $VARIANTS; do
-            arm64_bin="artifacts/arm64/mac_${v}_arm64"
-            x86_bin="artifacts/x86_64/mac_${v}_x86_64"
-            if [[ ! -f "$arm64_bin" ]]; then
-              echo "Error: missing ARM64 binary: $arm64_bin"
-              exit 1
-            fi
-            if [[ ! -f "$x86_bin" ]]; then
-              echo "Error: missing x86_64 binary: $x86_bin"
-              exit 1
-            fi
-            lipo -create "$arm64_bin" "$x86_bin" -output "universal_binaries/$v"
-            echo "Created universal binary: $v"
-          done
-          ls -la universal_binaries/
-
       - name: Create app bundles and DMGs
         run: |
-          # Generate icon first
           bash misc/macos/generate_icons.sh
 
           VARIANTS="krokiet krokiet_heif_avif krokiet_skia_vulkan krokiet_skia_vulkan_heif_avif"
           for v in $VARIANTS; do
-            bash misc/macos/create_dmg.sh "universal_binaries/$v" "mac_${v}_universal.dmg" "$v"
+            arm64_bin="artifacts/arm64/mac_${v}_arm64"
+            if [[ ! -f "$arm64_bin" ]]; then
+              echo "Error: missing ARM64 binary: $arm64_bin"
+              exit 1
+            fi
+            bash misc/macos/create_dmg.sh "$arm64_bin" "mac_${v}_arm64.dmg" "$v"
           done
           ls -lh *.dmg
 
       - name: Store DMG artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: krokiet-macos-universal-dmg
+          name: krokiet-macos-arm64-dmg
           path: |
-            mac_krokiet_universal.dmg
-            mac_krokiet_heif_avif_universal.dmg
-            mac_krokiet_skia_vulkan_universal.dmg
-            mac_krokiet_skia_vulkan_heif_avif_universal.dmg
+            mac_krokiet_arm64.dmg
+            mac_krokiet_heif_avif_arm64.dmg
+            mac_krokiet_skia_vulkan_arm64.dmg
+            mac_krokiet_skia_vulkan_heif_avif_arm64.dmg
           if-no-files-found: error
 
       - name: Release DMGs
@@ -237,8 +207,8 @@ jobs:
         with:
           tag_name: "Nightly"
           files: |
-            mac_krokiet_universal.dmg
-            mac_krokiet_heif_avif_universal.dmg
-            mac_krokiet_skia_vulkan_universal.dmg
-            mac_krokiet_skia_vulkan_heif_avif_universal.dmg
+            mac_krokiet_arm64.dmg
+            mac_krokiet_heif_avif_arm64.dmg
+            mac_krokiet_skia_vulkan_arm64.dmg
+            mac_krokiet_skia_vulkan_heif_avif_arm64.dmg
           token: ${{ secrets.PAT_REPOSITORY }}
